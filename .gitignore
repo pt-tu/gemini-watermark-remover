@@ -10,3 +10,5 @@ public/css/output.css
 # Logs / misc
 *.log
 .DS_Store
+.vercel
+.env*
