@@ -1,5 +1,5 @@
-import { defineConfig } from "vite";
-import vue from "@vitejs/plugin-vue";
+import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
 
 // The homepage tool is a Vue SPA built by Vite.
 // All static SEO pages (about, contact, blog, …) live in /public and are
@@ -16,7 +16,8 @@ export default defineConfig({
     }),
   ],
   build: {
-    outDir: "dist",
+    outDir: 'dist',
     emptyOutDir: true,
+    chunkSizeWarningLimit: 1000,
   },
 });
