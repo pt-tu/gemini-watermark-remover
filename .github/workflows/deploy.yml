@@ -5,13 +5,14 @@ on:
     branches:
       - main
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  BROWSERSLIST_IGNORE_OLD_DATA: true
+
 jobs:
   deploy:
     name: Deploy to Production
     runs-on: ubuntu-latest
-    env:
-      BROWSERSLIST_IGNORE_OLD_DATA: true
-      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
