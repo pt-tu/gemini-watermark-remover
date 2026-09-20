@@ -1,6 +1,13 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "npm ci",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "cleanUrls": true
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    { "source": "/", "destination": "/index" },
+    { "source": "/((?!assets/|css/|fonts/).*)/", "destination": "/$1/index" },
+    { "source": "/((?!assets/|css/|fonts/).*)", "destination": "/$1/index" }
+  ]
 }
