@@ -1,12 +1,19 @@
 <script setup>
-import { ref, reactive, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import {
+  ref,
+  reactive,
+  computed,
+  watch,
+  onMounted,
+  onBeforeUnmount,
+} from 'vue';
 import WatermarkTuner from './WatermarkTuner.vue';
 
 let enginePromise = null;
 function getEngine() {
   if (!enginePromise) {
-    enginePromise = import('../engine/videoEngine.js').then(({ VideoWatermarkEngine }) =>
-      VideoWatermarkEngine.create()
+    enginePromise = import('../engine/videoEngine.js').then(
+      ({ VideoWatermarkEngine }) => VideoWatermarkEngine.create(),
     );
   }
   return enginePromise;
@@ -45,7 +52,9 @@ const VIDEO_PRESETS = [
   },
 ];
 const presetId = ref('veo');
-const currentPreset = computed(() => VIDEO_PRESETS.find((p) => p.id === presetId.value));
+const currentPreset = computed(() =>
+  VIDEO_PRESETS.find((p) => p.id === presetId.value),
+);
 const settings = reactive({ ...VIDEO_PRESETS[0].settings });
 
 // Switching preset re-seeds the sliders with that preset's settings.
@@ -54,17 +63,27 @@ watch(presetId, () => {
 });
 
 // Computed properties for items
-const doneItems = computed(() => items.value.filter((i) => i.status === 'done'));
-const failedItems = computed(() => items.value.filter((i) => i.status === 'error'));
+const doneItems = computed(() =>
+  items.value.filter((i) => i.status === 'done'),
+);
+const failedItems = computed(() =>
+  items.value.filter((i) => i.status === 'error'),
+);
 const hasDoneVideos = computed(() => doneItems.value.length > 0);
 const hasFailedVideos = computed(() => failedItems.value.length > 0);
-const isProcessingAny = computed(() => isProcessingQueue.value || items.value.some((i) => i.status === 'processing' || i.status === 'pending'));
+const isProcessingAny = computed(
+  () =>
+    isProcessingQueue.value ||
+    items.value.some(
+      (i) => i.status === 'processing' || i.status === 'pending',
+    ),
+);
 
 // Dynamic output filename calculation
 function getOutputName(file, ext = 'mp4') {
   if (!file) return `clean_video.${ext}`;
   const rawBase = file.name.replace(/\.[^/.]+$/, '');
-  const prefix = useOriginalName.value ? '' : (filenamePrefix.value || '');
+  const prefix = useOriginalName.value ? '' : filenamePrefix.value || '';
   return `${prefix}${rawBase}.${ext}`;
 }
 
@@ -97,8 +116,10 @@ function onChange(e) {
 }
 
 async function handleFiles(fileList) {
-  const valid = Array.from(fileList).filter((f) =>
-    f.type.startsWith('video/') || /\.(mp4|webm|mov|mkv|m4v|avi|ogv)$/i.test(f.name)
+  const valid = Array.from(fileList).filter(
+    (f) =>
+      f.type.startsWith('video/') ||
+      /\.(mp4|webm|mov|mkv|m4v|avi|ogv)$/i.test(f.name),
   );
   if (!valid.length) {
     if (fileList.length > 0) {
@@ -178,8 +199,12 @@ function grabPreviewFrame(file) {
     };
 
     v.onloadedmetadata = () => {
-      const dur = Number.isFinite(v.duration) && v.duration > 0 ? v.duration : 1;
-      const seekTo = Math.min(Math.max(dur * 0.3, 0.1), Math.max(dur - 0.05, 0.1));
+      const dur =
+        Number.isFinite(v.duration) && v.duration > 0 ? v.duration : 1;
+      const seekTo = Math.min(
+        Math.max(dur * 0.3, 0.1),
+        Math.max(dur - 0.05, 0.1),
+      );
       const onSeeked = () => {
         try {
           const w = v.videoWidth || 1280;
@@ -308,7 +333,8 @@ async function downloadAll() {
 
   isZipping.value = true;
   try {
-    const { default: JSZip } = await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm');
+    const { default: JSZip } =
+      await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm');
     const zip = new JSZip();
     done.forEach((item) => {
       zip.file(getOutputName(item.file, item.ext), item.blob);
@@ -325,7 +351,9 @@ async function downloadAll() {
     setTimeout(() => URL.revokeObjectURL(url), 2000);
   } catch (err) {
     console.error('Failed to create ZIP:', err);
-    alert('Failed to generate ZIP archive. You can download videos individually.');
+    alert(
+      'Failed to generate ZIP archive. You can download videos individually.',
+    );
   } finally {
     isZipping.value = false;
   }
@@ -431,61 +459,113 @@ function reset() {
       v-if="!supported"
       class="flex flex-col items-center justify-center w-full h-56 rounded-2xl bg-red-50/60 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 text-center px-6"
     >
-      <iconify-icon icon="ph:warning-circle-bold" width="36" class="text-red-500 mb-2"></iconify-icon>
-      <p class="font-bold text-red-600 dark:text-red-400">Your browser can't process video locally.</p>
-      <p class="text-sm text-red-500/80 mt-1">Please try the latest Chrome or Edge on desktop.</p>
+      <iconify-icon
+        icon="ph:warning-circle-bold"
+        width="36"
+        class="text-red-500 mb-2"
+      ></iconify-icon>
+      <p class="font-bold text-red-600 dark:text-red-400">
+        Your browser can't process video locally.
+      </p>
+      <p class="text-sm text-red-500/80 mt-1">
+        Please try the latest Chrome or Edge on desktop.
+      </p>
     </div>
 
     <!-- Upload (Idle) -->
     <div
       v-else-if="status === 'idle'"
       class="group relative flex flex-col items-center justify-center w-full min-h-[14rem] py-8 border-2 border-dashed rounded-2xl bg-gray-50/50 dark:bg-gray-800/50 transition-all cursor-pointer"
-      :class="dragOver ? 'border-brand-primary bg-indigo-50/60 dark:bg-gray-800' : 'border-gray-300 dark:border-gray-700 hover:bg-indigo-50/50 dark:hover:bg-gray-800 hover:border-brand-primary'"
-      role="button" tabindex="0" aria-label="Upload videos"
-      @click="openPicker" @keydown.enter="openPicker"
-      @dragover.prevent="dragOver = true" @dragenter.prevent="dragOver = true"
-      @dragleave.prevent="dragOver = false" @drop.prevent="onDrop"
+      :class="
+        dragOver
+          ? 'border-brand-primary bg-indigo-50/60 dark:bg-gray-800'
+          : 'border-gray-300 dark:border-gray-700 hover:bg-indigo-50/50 dark:hover:bg-gray-800 hover:border-brand-primary'
+      "
+      role="button"
+      tabindex="0"
+      aria-label="Upload videos"
+      @click="openPicker"
+      @keydown.enter="openPicker"
+      @dragover.prevent="dragOver = true"
+      @dragenter.prevent="dragOver = true"
+      @dragleave.prevent="dragOver = false"
+      @drop.prevent="onDrop"
     >
       <div class="flex flex-col items-center justify-center text-center px-4">
-        <div class="w-14 h-14 bg-white dark:bg-gray-700 rounded-full shadow-sm flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-          <iconify-icon icon="ph:video-camera-bold" class="text-2xl text-gray-400 dark:text-gray-300 group-hover:text-brand-primary" aria-hidden="true"></iconify-icon>
+        <div
+          class="w-14 h-14 bg-white dark:bg-gray-700 rounded-full shadow-sm flex items-center justify-center mb-3 group-hover:scale-110 transition-transform"
+        >
+          <iconify-icon
+            icon="ph:video-camera-bold"
+            class="text-2xl text-gray-400 dark:text-gray-300 group-hover:text-brand-primary"
+            aria-hidden="true"
+          ></iconify-icon>
         </div>
-        <p class="mb-1 text-base font-bold text-slate-700 dark:text-slate-200 group-hover:text-brand-primary transition-colors">
+        <p
+          class="mb-1 text-base font-bold text-slate-700 dark:text-slate-200 group-hover:text-brand-primary transition-colors"
+        >
           Click to upload or drag Gemini Veo videos
         </p>
-        <p class="text-sm text-slate-400 dark:text-slate-500">MP4, WebM, MOV · Multiple files supported · Audio preserved</p>
+        <p class="text-sm text-slate-400 dark:text-slate-500">
+          MP4, WebM, MOV · Multiple files supported · Audio preserved
+        </p>
 
         <div class="mt-4 flex flex-col items-center gap-1.5" @click.stop>
-          <label class="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+          <label
+            class="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400"
+          >
             Watermark position:
             <select
               v-model="presetId"
               class="text-xs font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-primary/50 cursor-pointer"
             >
-              <option v-for="p in VIDEO_PRESETS" :key="p.id" :value="p.id">{{ p.label }}</option>
+              <option v-for="p in VIDEO_PRESETS" :key="p.id" :value="p.id">
+                {{ p.label }}
+              </option>
             </select>
           </label>
-          <p class="text-[11px] text-slate-400 dark:text-slate-500 max-w-xs">{{ currentPreset.desc }}</p>
+          <p class="text-[11px] text-slate-400 dark:text-slate-500 max-w-xs">
+            {{ currentPreset.desc }}
+          </p>
         </div>
 
-        <label class="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400 cursor-pointer" @click.stop>
-          <input type="checkbox" v-model="advanced" class="accent-brand-primary w-3.5 h-3.5" />
+        <label
+          class="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400 cursor-pointer"
+          @click.stop
+        >
+          <input
+            type="checkbox"
+            v-model="advanced"
+            class="accent-brand-primary w-3.5 h-3.5"
+          />
           Advanced: tune it yourself
         </label>
 
         <!-- Import from URL Section -->
-        <div class="mt-4 pt-3 border-t border-gray-200/60 dark:border-gray-700/60 w-full max-w-sm flex flex-col items-center" @click.stop>
+        <div
+          class="mt-4 pt-3 border-t border-gray-200/60 dark:border-gray-700/60 w-full max-w-sm flex flex-col items-center"
+          @click.stop
+        >
           <button
             type="button"
             @click="showUrlInput = !showUrlInput"
             class="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-primary hover:text-brand-secondary transition-colors cursor-pointer py-1 px-2.5 rounded-lg hover:bg-brand-primary/10"
           >
             <iconify-icon icon="ph:link-bold" width="14"></iconify-icon>
-            {{ showUrlInput ? 'Close URL import' : 'Or import video from URL / Link' }}
+            {{
+              showUrlInput
+                ? 'Close URL import'
+                : 'Or import video from URL / Link'
+            }}
           </button>
 
-          <div v-if="showUrlInput" class="mt-2.5 w-full text-left bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md">
-            <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
+          <div
+            v-if="showUrlInput"
+            class="mt-2.5 w-full text-left bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md"
+          >
+            <label
+              class="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1"
+            >
               Paste video link(s) (one per line):
             </label>
             <textarea
@@ -495,28 +575,57 @@ function reset() {
               class="w-full text-xs font-mono p-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-primary/50 resize-y"
             ></textarea>
             <div class="flex items-center justify-between mt-2">
-              <span v-if="urlError" class="text-[11px] text-red-500 font-medium truncate max-w-[200px]" :title="urlError">{{ urlError }}</span>
-              <span v-else class="text-[10px] text-slate-400">Supports Google Flow & direct MP4</span>
+              <span
+                v-if="urlError"
+                class="text-[11px] text-red-500 font-medium truncate max-w-[200px]"
+                :title="urlError"
+                >{{ urlError }}</span
+              >
+              <span v-else class="text-[10px] text-slate-400"
+                >Supports Google Flow & direct MP4</span
+              >
               <button
                 type="button"
                 @click="importFromUrls(false)"
                 :disabled="isFetchingUrls || !urlInputValue.trim()"
                 class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-primary hover:bg-brand-secondary disabled:opacity-50 text-white text-xs font-bold rounded-lg transition-all shadow-sm cursor-pointer"
               >
-                <iconify-icon v-if="isFetchingUrls" icon="ph:spinner-bold" class="animate-spin" width="14"></iconify-icon>
-                <iconify-icon v-else icon="ph:cloud-arrow-down-bold" width="14"></iconify-icon>
+                <iconify-icon
+                  v-if="isFetchingUrls"
+                  icon="ph:spinner-bold"
+                  class="animate-spin"
+                  width="14"
+                ></iconify-icon>
+                <iconify-icon
+                  v-else
+                  icon="ph:cloud-arrow-down-bold"
+                  width="14"
+                ></iconify-icon>
                 {{ isFetchingUrls ? 'Downloading…' : 'Fetch & Clean' }}
               </button>
             </div>
           </div>
         </div>
       </div>
-      <input ref="fileInput" type="file" accept="video/*" multiple class="hidden" aria-label="Video file input" @change="onChange" />
+      <input
+        ref="fileInput"
+        type="file"
+        accept="video/*"
+        multiple
+        class="hidden"
+        aria-label="Video file input"
+        @change="onChange"
+      />
     </div>
 
     <!-- Loading the preview frame -->
-    <div v-else-if="status === 'loading'" class="flex flex-col items-center justify-center w-full h-56">
-      <div class="w-12 h-12 rounded-full border-4 border-transparent border-t-brand-primary border-r-brand-secondary border-b-brand-accent animate-spin mb-3"></div>
+    <div
+      v-else-if="status === 'loading'"
+      class="flex flex-col items-center justify-center w-full h-56"
+    >
+      <div
+        class="w-12 h-12 rounded-full border-4 border-transparent border-t-brand-primary border-r-brand-secondary border-b-brand-accent animate-spin mb-3"
+      ></div>
       <p class="font-bold text-brand-primary">Loading preview…</p>
     </div>
 
@@ -524,39 +633,72 @@ function reset() {
     <div v-else-if="status === 'preview'" class="animate-fade-in">
       <div class="flex flex-col lg:flex-row gap-6">
         <div class="flex-1 min-w-0">
-          <WatermarkTuner :settings="settings" :frame="frame" :bg-img="bgImg" :base="base" />
-          <p class="text-xs text-slate-400 dark:text-slate-500 mt-3 leading-relaxed">
-            Adjust the sliders until the watermark disappears in the zoomed corner. The
-            <span class="text-brand-primary font-semibold">blue box</span> shows what gets cleaned.
+          <WatermarkTuner
+            :settings="settings"
+            :frame="frame"
+            :bg-img="bgImg"
+            :base="base"
+          />
+          <p
+            class="text-xs text-slate-400 dark:text-slate-500 mt-3 leading-relaxed"
+          >
+            Adjust the sliders until the watermark disappears in the zoomed
+            corner. The
+            <span class="text-brand-primary font-semibold">blue box</span> shows
+            what gets cleaned.
           </p>
         </div>
 
         <div class="w-full lg:w-60 flex-shrink-0">
-          <div class="bg-white dark:bg-theme-cardDark rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800 p-5 space-y-3 sticky top-24">
-            <h2 class="font-bold text-slate-900 dark:text-white text-base">Export</h2>
+          <div
+            class="bg-white dark:bg-theme-cardDark rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800 p-5 space-y-3 sticky top-24"
+          >
+            <h2 class="font-bold text-slate-900 dark:text-white text-base">
+              Export
+            </h2>
             <label class="block">
-              <div class="text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Position preset</div>
+              <div
+                class="text-xs font-bold text-slate-600 dark:text-slate-300 mb-1"
+              >
+                Position preset
+              </div>
               <select
                 v-model="presetId"
                 class="w-full text-xs font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-primary/50 cursor-pointer"
               >
-                <option v-for="p in VIDEO_PRESETS" :key="p.id" :value="p.id">{{ p.label }}</option>
+                <option v-for="p in VIDEO_PRESETS" :key="p.id" :value="p.id">
+                  {{ p.label }}
+                </option>
               </select>
-              <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1">{{ currentPreset.desc }}</p>
+              <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
+                {{ currentPreset.desc }}
+              </p>
             </label>
 
-            <button @click="resetSettings" class="w-full text-xs font-semibold text-slate-500 hover:text-brand-primary transition-colors">
+            <button
+              @click="resetSettings"
+              class="w-full text-xs font-semibold text-slate-500 hover:text-brand-primary transition-colors"
+            >
               Reset sliders to preset
             </button>
 
-            <button @click="startBatchExport" class="group w-full py-3 relative overflow-hidden rounded-xl font-bold text-white shadow-lg shadow-brand-primary/30 transition-all">
-              <div class="absolute inset-0 bg-gradient-to-r from-brand-primary via-brand-secondary to-brand-accent group-hover:scale-110 transition-transform duration-500"></div>
+            <button
+              @click="startBatchExport"
+              class="group w-full py-3 relative overflow-hidden rounded-xl font-bold text-white shadow-lg shadow-brand-primary/30 transition-all"
+            >
+              <div
+                class="absolute inset-0 bg-gradient-to-r from-brand-primary via-brand-secondary to-brand-accent group-hover:scale-110 transition-transform duration-500"
+              ></div>
               <div class="relative flex items-center justify-center gap-2">
-                <iconify-icon icon="ph:sparkle-fill" width="18"></iconify-icon> Remove &amp; Export
+                <iconify-icon icon="ph:sparkle-fill" width="18"></iconify-icon>
+                Remove &amp; Export
               </div>
             </button>
 
-            <button @click="reset" class="w-full py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-slate-600 dark:text-slate-300 hover:border-brand-primary hover:text-brand-primary rounded-xl font-bold transition-all">
+            <button
+              @click="reset"
+              class="w-full py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-slate-600 dark:text-slate-300 hover:border-brand-primary hover:text-brand-primary rounded-xl font-bold transition-all"
+            >
               Choose another video
             </button>
           </div>
@@ -573,7 +715,10 @@ function reset() {
         <!-- Left: Filename prefix and Original Name checkbox -->
         <div class="flex flex-wrap items-center gap-3 sm:gap-4">
           <div class="flex items-center gap-2">
-            <span class="text-xs font-bold text-slate-600 dark:text-slate-300 whitespace-nowrap">Prefix:</span>
+            <span
+              class="text-xs font-bold text-slate-600 dark:text-slate-300 whitespace-nowrap"
+              >Prefix:</span
+            >
             <input
               v-model="filenamePrefix"
               :disabled="useOriginalName"
@@ -593,7 +738,9 @@ function reset() {
               class="accent-brand-primary w-4 h-4 rounded cursor-pointer"
               title="use original name"
             />
-            <span class="group-hover:text-brand-primary transition-colors">Use original name</span>
+            <span class="group-hover:text-brand-primary transition-colors"
+              >Use original name</span
+            >
           </label>
         </div>
 
@@ -607,7 +754,10 @@ function reset() {
             class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer"
             title="Retry failed videos"
           >
-            <iconify-icon icon="ph:arrow-clockwise-bold" width="15"></iconify-icon>
+            <iconify-icon
+              icon="ph:arrow-clockwise-bold"
+              width="15"
+            ></iconify-icon>
             Retry Failed ({{ failedItems.length }})
           </button>
 
@@ -619,8 +769,17 @@ function reset() {
             class="inline-flex items-center gap-1.5 px-4 py-1.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-all shadow-sm active:scale-95 shadow-green-600/20 cursor-pointer"
             title="Download all successful videos"
           >
-            <iconify-icon v-if="isZipping" icon="ph:spinner-gap-bold" class="animate-spin" width="15"></iconify-icon>
-            <iconify-icon v-else icon="ph:download-simple-bold" width="15"></iconify-icon>
+            <iconify-icon
+              v-if="isZipping"
+              icon="ph:spinner-gap-bold"
+              class="animate-spin"
+              width="15"
+            ></iconify-icon>
+            <iconify-icon
+              v-else
+              icon="ph:download-simple-bold"
+              width="15"
+            ></iconify-icon>
             {{ isZipping ? 'Zipping…' : `Download All (${doneItems.length})` }}
           </button>
 
@@ -670,8 +829,14 @@ function reset() {
         class="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-brand-primary/30 shadow-md animate-fade-in"
       >
         <div class="flex items-center justify-between mb-2">
-          <span class="text-xs font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
-            <iconify-icon icon="ph:link-bold" class="text-brand-primary" width="16"></iconify-icon>
+          <span
+            class="text-xs font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5"
+          >
+            <iconify-icon
+              icon="ph:link-bold"
+              class="text-brand-primary"
+              width="16"
+            ></iconify-icon>
             Import Videos from URLs
           </span>
           <button
@@ -688,8 +853,14 @@ function reset() {
           class="w-full text-xs font-mono p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-primary/50 resize-y"
         ></textarea>
         <div class="flex items-center justify-between mt-2.5">
-          <span v-if="urlError" class="text-[11px] text-red-500 font-medium truncate max-w-xs">{{ urlError }}</span>
-          <span v-else class="text-[11px] text-slate-400">Multiple links allowed · One per line</span>
+          <span
+            v-if="urlError"
+            class="text-[11px] text-red-500 font-medium truncate max-w-xs"
+            >{{ urlError }}</span
+          >
+          <span v-else class="text-[11px] text-slate-400"
+            >Multiple links allowed · One per line</span
+          >
           <div class="flex items-center gap-2">
             <button
               @click="showBatchUrlModal = false"
@@ -702,8 +873,17 @@ function reset() {
               :disabled="isFetchingUrls || !batchUrlInputValue.trim()"
               class="inline-flex items-center gap-1.5 px-4 py-1.5 bg-brand-primary hover:bg-brand-secondary disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer"
             >
-              <iconify-icon v-if="isFetchingUrls" icon="ph:spinner-bold" class="animate-spin" width="14"></iconify-icon>
-              <iconify-icon v-else icon="ph:cloud-arrow-down-bold" width="14"></iconify-icon>
+              <iconify-icon
+                v-if="isFetchingUrls"
+                icon="ph:spinner-bold"
+                class="animate-spin"
+                width="14"
+              ></iconify-icon>
+              <iconify-icon
+                v-else
+                icon="ph:cloud-arrow-down-bold"
+                width="14"
+              ></iconify-icon>
               {{ isFetchingUrls ? 'Downloading…' : 'Fetch & Queue' }}
             </button>
           </div>
@@ -720,14 +900,20 @@ function reset() {
           <!-- Item Row Header: space-between -->
           <div class="flex flex-wrap items-center justify-between gap-2">
             <!-- Left info: file icon + names -->
-            <div class="flex items-center gap-2.5 min-w-0 max-w-full sm:max-w-xl">
+            <div
+              class="flex items-center gap-2.5 min-w-0 max-w-full sm:max-w-xl"
+            >
               <div
                 class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-base"
                 :class="{
-                  'bg-gray-100 dark:bg-gray-800 text-gray-500': item.status === 'pending',
-                  'bg-indigo-50 dark:bg-indigo-900/30 text-brand-primary': item.status === 'processing',
-                  'bg-green-50 dark:bg-green-900/30 text-green-600': item.status === 'done',
-                  'bg-red-50 dark:bg-red-900/30 text-red-500': item.status === 'error',
+                  'bg-gray-100 dark:bg-gray-800 text-gray-500':
+                    item.status === 'pending',
+                  'bg-indigo-50 dark:bg-indigo-900/30 text-brand-primary':
+                    item.status === 'processing',
+                  'bg-green-50 dark:bg-green-900/30 text-green-600':
+                    item.status === 'done',
+                  'bg-red-50 dark:bg-red-900/30 text-red-500':
+                    item.status === 'error',
                 }"
               >
                 <iconify-icon
@@ -735,22 +921,29 @@ function reset() {
                     item.status === 'done'
                       ? 'ph:check-circle-fill'
                       : item.status === 'error'
-                      ? 'ph:warning-circle-fill'
-                      : 'ph:video-camera-bold'
+                        ? 'ph:warning-circle-fill'
+                        : 'ph:video-camera-bold'
                   "
                 ></iconify-icon>
               </div>
 
               <div class="min-w-0 truncate">
                 <div class="flex items-center gap-2">
-                  <span class="font-bold text-sm text-slate-800 dark:text-slate-100 truncate" :title="item.displayName">
+                  <span
+                    class="font-bold text-sm text-slate-800 dark:text-slate-100 truncate"
+                    :title="item.displayName"
+                  >
                     {{ item.displayName }}
                   </span>
-                  <span class="text-[10px] font-mono text-slate-400 dark:text-slate-500 flex-shrink-0">
+                  <span
+                    class="text-[10px] font-mono text-slate-400 dark:text-slate-500 flex-shrink-0"
+                  >
                     ({{ (item.file.size / (1024 * 1024)).toFixed(1) }} MB)
                   </span>
                 </div>
-                <div class="text-[11px] font-mono text-slate-400 dark:text-slate-500 truncate">
+                <div
+                  class="text-[11px] font-mono text-slate-400 dark:text-slate-500 truncate"
+                >
                   Output: {{ getOutputName(item.file, item.ext) }}
                 </div>
               </div>
@@ -763,7 +956,10 @@ function reset() {
                 v-if="item.status === 'pending'"
                 class="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
               >
-                <iconify-icon icon="ph:hourglass-bold" width="13"></iconify-icon>
+                <iconify-icon
+                  icon="ph:hourglass-bold"
+                  width="13"
+                ></iconify-icon>
                 Waiting in queue
               </span>
 
@@ -772,36 +968,60 @@ function reset() {
                 v-else-if="item.status === 'processing'"
                 class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-brand-primary"
               >
-                <div class="w-3.5 h-3.5 rounded-full border-2 border-transparent border-t-brand-primary border-r-brand-secondary animate-spin"></div>
+                <div
+                  class="w-3.5 h-3.5 rounded-full border-2 border-transparent border-t-brand-primary border-r-brand-secondary animate-spin"
+                ></div>
                 Cleaning… {{ Math.round(item.progress * 100) }}%
               </span>
 
               <!-- Error state & single retry -->
-              <div v-else-if="item.status === 'error'" class="flex items-center gap-2">
-                <span class="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400">
-                  <iconify-icon icon="ph:warning-circle-bold" width="13"></iconify-icon>
+              <div
+                v-else-if="item.status === 'error'"
+                class="flex items-center gap-2"
+              >
+                <span
+                  class="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400"
+                >
+                  <iconify-icon
+                    icon="ph:warning-circle-bold"
+                    width="13"
+                  ></iconify-icon>
                   Failed
                 </span>
                 <button
                   @click="retryItem(item)"
                   class="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg transition-all active:scale-95 cursor-pointer"
                 >
-                  <iconify-icon icon="ph:arrow-clockwise-bold" width="12"></iconify-icon>
+                  <iconify-icon
+                    icon="ph:arrow-clockwise-bold"
+                    width="12"
+                  ></iconify-icon>
                   Retry
                 </button>
               </div>
 
               <!-- Done state: download button -->
-              <div v-else-if="item.status === 'done'" class="flex items-center gap-2">
-                <span class="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400">
-                  <iconify-icon icon="ph:check-circle-fill" width="13"></iconify-icon>
+              <div
+                v-else-if="item.status === 'done'"
+                class="flex items-center gap-2"
+              >
+                <span
+                  class="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400"
+                >
+                  <iconify-icon
+                    icon="ph:check-circle-fill"
+                    width="13"
+                  ></iconify-icon>
                   Cleaned
                 </span>
                 <button
                   @click="downloadItem(item)"
                   class="inline-flex items-center gap-1.5 px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-lg transition-all active:scale-95 cursor-pointer shadow-sm"
                 >
-                  <iconify-icon icon="ph:download-simple-bold" width="14"></iconify-icon>
+                  <iconify-icon
+                    icon="ph:download-simple-bold"
+                    width="14"
+                  ></iconify-icon>
                   Download
                 </button>
               </div>
@@ -819,7 +1039,9 @@ function reset() {
 
           <!-- Progress bar for processing item -->
           <div v-if="item.status === 'processing'" class="w-full mt-1">
-            <div class="w-full h-2 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+            <div
+              class="w-full h-2 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden"
+            >
               <div
                 class="h-full bg-gradient-to-r from-brand-primary via-brand-secondary to-brand-accent transition-all duration-150"
                 :style="{ width: `${Math.round(item.progress * 100)}%` }"
@@ -832,37 +1054,74 @@ function reset() {
             v-if="item.status === 'error'"
             class="p-3 bg-red-50/70 dark:bg-red-900/20 border border-red-200/70 dark:border-red-900/40 rounded-xl text-xs font-medium text-red-600 dark:text-red-300 flex items-center gap-2"
           >
-            <iconify-icon icon="ph:warning-bold" class="text-base flex-shrink-0 text-red-500"></iconify-icon>
-            <span>{{ item.errorMsg || 'Something went wrong while processing this video.' }}</span>
+            <iconify-icon
+              icon="ph:warning-bold"
+              class="text-base flex-shrink-0 text-red-500"
+            ></iconify-icon>
+            <span>{{
+              item.errorMsg ||
+              'Something went wrong while processing this video.'
+            }}</span>
           </div>
 
           <!-- Side-by-side Video Player when Done -->
-          <div v-if="item.status === 'done'" class="grid grid-cols-1 md:grid-cols-2 gap-3 min-w-0 mt-1">
+          <div
+            v-if="item.status === 'done'"
+            class="grid grid-cols-1 md:grid-cols-2 gap-3 min-w-0 mt-1"
+          >
             <!-- Original video player -->
-            <div class="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-white dark:bg-theme-cardDark shadow-sm">
-              <div class="bg-gray-50 dark:bg-gray-800/80 px-3 py-1.5 border-b border-gray-200 dark:border-gray-700 font-bold text-xs text-slate-700 dark:text-slate-200 flex justify-between items-center">
+            <div
+              class="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-white dark:bg-theme-cardDark shadow-sm"
+            >
+              <div
+                class="bg-gray-50 dark:bg-gray-800/80 px-3 py-1.5 border-b border-gray-200 dark:border-gray-700 font-bold text-xs text-slate-700 dark:text-slate-200 flex justify-between items-center"
+              >
                 <span>Original</span>
-                <span v-if="item.width && item.height" class="text-[10px] font-mono text-slate-400">
+                <span
+                  v-if="item.width && item.height"
+                  class="text-[10px] font-mono text-slate-400"
+                >
                   {{ item.width }} × {{ item.height }} px
                 </span>
               </div>
               <div class="p-2 checker flex justify-center bg-black/5">
-                <video :src="item.originalUrl" controls playsinline class="max-h-56 w-full object-contain rounded"></video>
+                <video
+                  :src="item.originalUrl"
+                  controls
+                  playsinline
+                  class="max-h-56 w-full object-contain rounded"
+                ></video>
               </div>
             </div>
 
             <!-- Cleaned video player -->
-            <div class="rounded-xl overflow-hidden border border-green-500/40 ring-1 ring-green-500/20 bg-white dark:bg-theme-cardDark shadow-sm">
-              <div class="bg-green-50 dark:bg-green-900/20 px-3 py-1.5 border-b border-green-500/30 flex items-center justify-between text-xs font-bold text-green-600 dark:text-green-400">
+            <div
+              class="rounded-xl overflow-hidden border border-green-500/40 ring-1 ring-green-500/20 bg-white dark:bg-theme-cardDark shadow-sm"
+            >
+              <div
+                class="bg-green-50 dark:bg-green-900/20 px-3 py-1.5 border-b border-green-500/30 flex items-center justify-between text-xs font-bold text-green-600 dark:text-green-400"
+              >
                 <span class="flex items-center gap-1">
-                  <iconify-icon icon="ph:check-circle-fill" width="14"></iconify-icon> Cleaned
+                  <iconify-icon
+                    icon="ph:check-circle-fill"
+                    width="14"
+                  ></iconify-icon>
+                  Cleaned
                 </span>
-                <span v-if="item.blob" class="text-[10px] font-mono text-green-700/70 dark:text-green-300/70">
+                <span
+                  v-if="item.blob"
+                  class="text-[10px] font-mono text-green-700/70 dark:text-green-300/70"
+                >
                   {{ (item.blob.size / (1024 * 1024)).toFixed(1) }} MB
                 </span>
               </div>
               <div class="p-2 checker flex justify-center bg-black/5">
-                <video :src="item.resultUrl" controls playsinline class="max-h-56 w-full object-contain rounded"></video>
+                <video
+                  :src="item.resultUrl"
+                  controls
+                  playsinline
+                  class="max-h-56 w-full object-contain rounded"
+                ></video>
               </div>
             </div>
           </div>
@@ -870,7 +1129,15 @@ function reset() {
       </div>
 
       <!-- Hidden file input for adding more videos -->
-      <input ref="fileInput" type="file" accept="video/*" multiple class="hidden" aria-label="Video file input" @change="onChange" />
+      <input
+        ref="fileInput"
+        type="file"
+        accept="video/*"
+        multiple
+        class="hidden"
+        aria-label="Video file input"
+        @change="onChange"
+      />
     </div>
   </div>
 </template>

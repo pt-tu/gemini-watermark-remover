@@ -2,14 +2,17 @@
 import { ref, reactive, computed, watch } from 'vue';
 import WatermarkTuner from './WatermarkTuner.vue';
 import { cleanFrame } from '../engine/tuner.js';
-import { getWatermarkInfo, getCompactWatermarkInfo } from '../engine/geometry.js';
+import {
+  getWatermarkInfo,
+  getCompactWatermarkInfo,
+} from '../engine/geometry.js';
 
 // Engine is lazy-loaded only when the user uploads an image.
 let enginePromise = null;
 function getEngine() {
   if (!enginePromise) {
-    enginePromise = import('../engine/watermarkEngine.js').then(({ WatermarkEngine }) =>
-      WatermarkEngine.create()
+    enginePromise = import('../engine/watermarkEngine.js').then(
+      ({ WatermarkEngine }) => WatermarkEngine.create(),
     );
   }
   return enginePromise;
@@ -19,7 +22,9 @@ const fileInput = ref(null);
 const dragOver = ref(false);
 const items = ref([]); // { name, displayName, status, originalSrc, url, blob, width, height }
 
-const doneItems = computed(() => items.value.filter((i) => i.status === 'done'));
+const doneItems = computed(() =>
+  items.value.filter((i) => i.status === 'done'),
+);
 const hasResults = computed(() => items.value.length > 0);
 
 // Advanced "tune-it-yourself" mode (off = default lossless auto removal)
@@ -50,7 +55,9 @@ const IMG_PRESETS = [
   },
 ];
 const presetId = ref('compact');
-const currentPreset = computed(() => IMG_PRESETS.find((p) => p.id === presetId.value));
+const currentPreset = computed(() =>
+  IMG_PRESETS.find((p) => p.id === presetId.value),
+);
 const tunerActive = ref(false);
 const tunerFrame = ref(null); // { width, height, imageData }
 const tunerBase = ref(null);
@@ -125,8 +132,19 @@ async function handleFiles(fileList) {
       // Clean with the same tuned defaults as the Advanced tuner, so the
       // one-click flow targets the watermark's current position.
       const { width, height, imageData, src } = await loadImageData(file);
-      const copy = new ImageData(new Uint8ClampedArray(imageData.data), width, height);
-      cleanFrame(engine.bg96, copy, width, height, baseFor(width, height), currentPreset.value.settings);
+      const copy = new ImageData(
+        new Uint8ClampedArray(imageData.data),
+        width,
+        height,
+      );
+      cleanFrame(
+        engine.bg96,
+        copy,
+        width,
+        height,
+        baseFor(width, height),
+        currentPreset.value.settings,
+      );
 
       const c = document.createElement('canvas');
       c.width = width;
@@ -157,7 +175,8 @@ function downloadOne(item) {
 async function downloadAll() {
   const done = doneItems.value;
   if (!done.length) return;
-  const { default: JSZip } = await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm');
+  const { default: JSZip } =
+    await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm');
   const zip = new JSZip();
   done.forEach((item) => zip.file(item.name, item.blob));
   const zipBlob = await zip.generateAsync({ type: 'blob' });
@@ -175,14 +194,24 @@ function loadImageData(file) {
     const url = URL.createObjectURL(file);
     const img = new Image();
     img.onload = () => {
-      const w = img.naturalWidth, h = img.naturalHeight;
+      const w = img.naturalWidth,
+        h = img.naturalHeight;
       const c = document.createElement('canvas');
-      c.width = w; c.height = h;
+      c.width = w;
+      c.height = h;
       const cx = c.getContext('2d', { willReadFrequently: true });
       cx.drawImage(img, 0, 0);
-      resolve({ width: w, height: h, imageData: cx.getImageData(0, 0, w, h), src: url });
+      resolve({
+        width: w,
+        height: h,
+        imageData: cx.getImageData(0, 0, w, h),
+        src: url,
+      });
     };
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not read image')); };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Could not read image'));
+    };
     img.src = url;
   });
 }
@@ -191,7 +220,11 @@ async function startTuner(file, engine) {
   try {
     const f = await loadImageData(file);
     tunerOrigSrc.value = f.src;
-    tunerFrame.value = { width: f.width, height: f.height, imageData: f.imageData };
+    tunerFrame.value = {
+      width: f.width,
+      height: f.height,
+      imageData: f.imageData,
+    };
     tunerBase.value = baseFor(f.width, f.height);
     tunerBgImg.value = engine.bg96;
     tunerName.value = `clean_${file.name.replace(/\.[^/.]+$/, '')}.png`;
@@ -209,10 +242,17 @@ function resetTunerSettings() {
 
 async function downloadTuner() {
   const { width, height, imageData } = tunerFrame.value;
-  const copy = new ImageData(new Uint8ClampedArray(imageData.data), width, height);
-  cleanFrame(tunerBgImg.value, copy, width, height, tunerBase.value, { ...tunerSettings });
+  const copy = new ImageData(
+    new Uint8ClampedArray(imageData.data),
+    width,
+    height,
+  );
+  cleanFrame(tunerBgImg.value, copy, width, height, tunerBase.value, {
+    ...tunerSettings,
+  });
   const c = document.createElement('canvas');
-  c.width = width; c.height = height;
+  c.width = width;
+  c.height = height;
   c.getContext('2d').putImageData(copy, 0, 0);
   const blob = await new Promise((r) => c.toBlob(r, 'image/png'));
   const url = URL.createObjectURL(blob);
@@ -256,7 +296,9 @@ async function importFromUrls() {
         const p = u.pathname.split('/').filter(Boolean).pop();
         if (p) name = p.includes('.') ? p : `${p}.png`;
       } catch (_) {}
-      fetchedFiles.push(new File([blob], name, { type: blob.type || 'image/png' }));
+      fetchedFiles.push(
+        new File([blob], name, { type: blob.type || 'image/png' }),
+      );
     } catch (err) {
       console.error('Failed to fetch image:', url, err);
       urlError.value = `Failed: ${url.slice(0, 30)}... (${err.message})`;
@@ -296,35 +338,71 @@ function reset() {
     <div v-if="tunerActive" class="animate-fade-in">
       <div class="flex flex-col lg:flex-row gap-6">
         <div class="flex-1 min-w-0">
-          <WatermarkTuner :settings="tunerSettings" :frame="tunerFrame" :bg-img="tunerBgImg" :base="tunerBase" />
-          <p class="text-xs text-slate-400 dark:text-slate-500 mt-3 leading-relaxed">
-            Drag the sliders until the watermark disappears in the zoomed corner. The
-            <span class="text-brand-primary font-semibold">blue box</span> shows what gets cleaned.
+          <WatermarkTuner
+            :settings="tunerSettings"
+            :frame="tunerFrame"
+            :bg-img="tunerBgImg"
+            :base="tunerBase"
+          />
+          <p
+            class="text-xs text-slate-400 dark:text-slate-500 mt-3 leading-relaxed"
+          >
+            Drag the sliders until the watermark disappears in the zoomed
+            corner. The
+            <span class="text-brand-primary font-semibold">blue box</span> shows
+            what gets cleaned.
           </p>
         </div>
         <div class="w-full lg:w-60 flex-shrink-0">
-          <div class="bg-white dark:bg-theme-cardDark rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800 p-5 space-y-3 sticky top-24">
-            <h2 class="font-bold text-slate-900 dark:text-white text-base">Export</h2>
+          <div
+            class="bg-white dark:bg-theme-cardDark rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800 p-5 space-y-3 sticky top-24"
+          >
+            <h2 class="font-bold text-slate-900 dark:text-white text-base">
+              Export
+            </h2>
             <label class="block">
-              <div class="text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Position preset</div>
+              <div
+                class="text-xs font-bold text-slate-600 dark:text-slate-300 mb-1"
+              >
+                Position preset
+              </div>
               <select
                 v-model="presetId"
                 class="w-full text-xs font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-primary/50 cursor-pointer"
               >
-                <option v-for="p in IMG_PRESETS" :key="p.id" :value="p.id">{{ p.label }}</option>
+                <option v-for="p in IMG_PRESETS" :key="p.id" :value="p.id">
+                  {{ p.label }}
+                </option>
               </select>
-              <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1">{{ currentPreset.desc }}</p>
+              <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
+                {{ currentPreset.desc }}
+              </p>
             </label>
-            <button @click="resetTunerSettings" class="w-full text-xs font-semibold text-slate-500 hover:text-brand-primary transition-colors">
+            <button
+              @click="resetTunerSettings"
+              class="w-full text-xs font-semibold text-slate-500 hover:text-brand-primary transition-colors"
+            >
               Reset sliders to preset
             </button>
-            <button @click="downloadTuner" class="group w-full py-3 relative overflow-hidden rounded-xl font-bold text-white shadow-lg shadow-brand-primary/30 transition-all">
-              <div class="absolute inset-0 bg-gradient-to-r from-brand-primary via-brand-secondary to-brand-accent group-hover:scale-110 transition-transform duration-500"></div>
+            <button
+              @click="downloadTuner"
+              class="group w-full py-3 relative overflow-hidden rounded-xl font-bold text-white shadow-lg shadow-brand-primary/30 transition-all"
+            >
+              <div
+                class="absolute inset-0 bg-gradient-to-r from-brand-primary via-brand-secondary to-brand-accent group-hover:scale-110 transition-transform duration-500"
+              ></div>
               <div class="relative flex items-center justify-center gap-2">
-                <iconify-icon icon="ph:download-simple-bold" width="18"></iconify-icon> Download PNG
+                <iconify-icon
+                  icon="ph:download-simple-bold"
+                  width="18"
+                ></iconify-icon>
+                Download PNG
               </div>
             </button>
-            <button @click="reset" class="w-full py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-slate-600 dark:text-slate-300 hover:border-brand-primary hover:text-brand-primary rounded-xl font-bold transition-all">
+            <button
+              @click="reset"
+              class="w-full py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-slate-600 dark:text-slate-300 hover:border-brand-primary hover:text-brand-primary rounded-xl font-bold transition-all"
+            >
               Choose another image
             </button>
           </div>
@@ -366,37 +444,64 @@ function reset() {
         >
           Click to upload or drag images
         </p>
-        <p class="text-sm text-slate-400 dark:text-slate-500">PNG, JPG, WebP · Multiple files supported</p>
+        <p class="text-sm text-slate-400 dark:text-slate-500">
+          PNG, JPG, WebP · Multiple files supported
+        </p>
         <div class="mt-4 flex flex-col items-center gap-1.5" @click.stop>
-          <label class="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+          <label
+            class="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400"
+          >
             Watermark position:
             <select
               v-model="presetId"
               class="text-xs font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-primary/50 cursor-pointer"
             >
-              <option v-for="p in IMG_PRESETS" :key="p.id" :value="p.id">{{ p.label }}</option>
+              <option v-for="p in IMG_PRESETS" :key="p.id" :value="p.id">
+                {{ p.label }}
+              </option>
             </select>
           </label>
-          <p class="text-[11px] text-slate-400 dark:text-slate-500 max-w-xs">{{ currentPreset.desc }}</p>
+          <p class="text-[11px] text-slate-400 dark:text-slate-500 max-w-xs">
+            {{ currentPreset.desc }}
+          </p>
         </div>
-        <label class="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400 cursor-pointer" @click.stop>
-          <input type="checkbox" v-model="advanced" class="accent-brand-primary w-3.5 h-3.5" />
+        <label
+          class="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400 cursor-pointer"
+          @click.stop
+        >
+          <input
+            type="checkbox"
+            v-model="advanced"
+            class="accent-brand-primary w-3.5 h-3.5"
+          />
           Advanced: tune it yourself
         </label>
 
         <!-- Import from URL Section -->
-        <div class="mt-4 pt-3 border-t border-gray-200/60 dark:border-gray-700/60 w-full max-w-sm flex flex-col items-center" @click.stop>
+        <div
+          class="mt-4 pt-3 border-t border-gray-200/60 dark:border-gray-700/60 w-full max-w-sm flex flex-col items-center"
+          @click.stop
+        >
           <button
             type="button"
             @click="showUrlInput = !showUrlInput"
             class="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-primary hover:text-brand-secondary transition-colors cursor-pointer py-1 px-2.5 rounded-lg hover:bg-brand-primary/10"
           >
             <iconify-icon icon="ph:link-bold" width="14"></iconify-icon>
-            {{ showUrlInput ? 'Close URL import' : 'Or import image from URL / Link' }}
+            {{
+              showUrlInput
+                ? 'Close URL import'
+                : 'Or import image from URL / Link'
+            }}
           </button>
 
-          <div v-if="showUrlInput" class="mt-2.5 w-full text-left bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md">
-            <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
+          <div
+            v-if="showUrlInput"
+            class="mt-2.5 w-full text-left bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md"
+          >
+            <label
+              class="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1"
+            >
               Paste image link(s) (one per line):
             </label>
             <textarea
@@ -406,16 +511,32 @@ function reset() {
               class="w-full text-xs font-mono p-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-primary/50 resize-y"
             ></textarea>
             <div class="flex items-center justify-between mt-2">
-              <span v-if="urlError" class="text-[11px] text-red-500 font-medium truncate max-w-[200px]" :title="urlError">{{ urlError }}</span>
-              <span v-else class="text-[10px] text-slate-400">Supports Google Flow & direct PNG/JPG</span>
+              <span
+                v-if="urlError"
+                class="text-[11px] text-red-500 font-medium truncate max-w-[200px]"
+                :title="urlError"
+                >{{ urlError }}</span
+              >
+              <span v-else class="text-[10px] text-slate-400"
+                >Supports Google Flow & direct PNG/JPG</span
+              >
               <button
                 type="button"
                 @click="importFromUrls"
                 :disabled="isFetchingUrls || !urlInputValue.trim()"
                 class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-primary hover:bg-brand-secondary disabled:opacity-50 text-white text-xs font-bold rounded-lg transition-all shadow-sm cursor-pointer"
               >
-                <iconify-icon v-if="isFetchingUrls" icon="ph:spinner-bold" class="animate-spin" width="14"></iconify-icon>
-                <iconify-icon v-else icon="ph:cloud-arrow-down-bold" width="14"></iconify-icon>
+                <iconify-icon
+                  v-if="isFetchingUrls"
+                  icon="ph:spinner-bold"
+                  class="animate-spin"
+                  width="14"
+                ></iconify-icon>
+                <iconify-icon
+                  v-else
+                  icon="ph:cloud-arrow-down-bold"
+                  width="14"
+                ></iconify-icon>
                 {{ isFetchingUrls ? 'Downloading…' : 'Fetch & Clean' }}
               </button>
             </div>
@@ -449,15 +570,28 @@ function reset() {
               <div
                 class="bg-gray-50 dark:bg-gray-800/80 px-3 py-2 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center"
               >
-                <h3 class="font-bold text-slate-700 dark:text-slate-200 text-xs">Original</h3>
-                <div v-if="item.status === 'done'" class="text-[10px] font-mono text-slate-500">
+                <h3
+                  class="font-bold text-slate-700 dark:text-slate-200 text-xs"
+                >
+                  Original
+                </h3>
+                <div
+                  v-if="item.status === 'done'"
+                  class="text-[10px] font-mono text-slate-500"
+                >
                   {{ item.width }} × {{ item.height }} px
                 </div>
               </div>
               <div class="p-3 checker flex justify-center h-64">
-                <img v-if="item.originalSrc" :src="item.originalSrc" class="max-h-full object-contain rounded shadow-sm mx-auto" />
+                <img
+                  v-if="item.originalSrc"
+                  :src="item.originalSrc"
+                  class="max-h-full object-contain rounded shadow-sm mx-auto"
+                />
                 <div v-else class="flex items-center justify-center">
-                  <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
+                  <div
+                    class="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"
+                  ></div>
                 </div>
               </div>
             </div>
@@ -465,29 +599,67 @@ function reset() {
             <!-- Cleaned -->
             <div
               class="bg-white dark:bg-theme-cardDark rounded-xl shadow-md overflow-hidden"
-              :class="item.status === 'done' ? 'border border-green-500/40 ring-2 ring-green-500/20' : 'border border-brand-primary/30'"
+              :class="
+                item.status === 'done'
+                  ? 'border border-green-500/40 ring-2 ring-green-500/20'
+                  : 'border border-brand-primary/30'
+              "
             >
               <div
                 class="px-3 py-2 border-b flex items-center gap-1"
-                :class="item.status === 'done' ? 'bg-green-50 dark:bg-green-900/20 border-green-500/30' : 'bg-indigo-50 dark:bg-indigo-900/20 border-brand-primary/20'"
+                :class="
+                  item.status === 'done'
+                    ? 'bg-green-50 dark:bg-green-900/20 border-green-500/30'
+                    : 'bg-indigo-50 dark:bg-indigo-900/20 border-brand-primary/20'
+                "
               >
                 <template v-if="item.status === 'done'">
-                  <iconify-icon icon="ph:check-circle-fill" width="16" class="text-green-600 dark:text-green-400"></iconify-icon>
-                  <span class="font-bold text-green-600 dark:text-green-400 text-xs">Cleaned</span>
+                  <iconify-icon
+                    icon="ph:check-circle-fill"
+                    width="16"
+                    class="text-green-600 dark:text-green-400"
+                  ></iconify-icon>
+                  <span
+                    class="font-bold text-green-600 dark:text-green-400 text-xs"
+                    >Cleaned</span
+                  >
                 </template>
-                <span v-else class="font-bold text-brand-primary text-xs">Removing watermark…</span>
+                <span v-else class="font-bold text-brand-primary text-xs"
+                  >Removing watermark…</span
+                >
               </div>
               <div class="p-3 checker flex justify-center h-64">
-                <img v-if="item.status === 'done'" :src="item.url" class="max-h-full object-contain rounded shadow-sm mx-auto" />
-                <p v-else-if="item.status === 'error'" class="text-sm font-semibold text-red-500 self-center">Failed to process</p>
-                <p v-else class="text-sm font-semibold text-brand-primary self-center">Removing watermark...</p>
+                <img
+                  v-if="item.status === 'done'"
+                  :src="item.url"
+                  class="max-h-full object-contain rounded shadow-sm mx-auto"
+                />
+                <p
+                  v-else-if="item.status === 'error'"
+                  class="text-sm font-semibold text-red-500 self-center"
+                >
+                  Failed to process
+                </p>
+                <p
+                  v-else
+                  class="text-sm font-semibold text-brand-primary self-center"
+                >
+                  Removing watermark...
+                </p>
               </div>
-              <div v-if="item.status === 'done'" class="p-3 border-t border-green-500/20">
+              <div
+                v-if="item.status === 'done'"
+                class="p-3 border-t border-green-500/20"
+              >
                 <button
                   @click="downloadOne(item)"
                   class="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold text-white bg-green-600 hover:bg-green-700 rounded-xl transition-all active:scale-95"
                 >
-                  <iconify-icon icon="ph:download-simple-bold" width="16"></iconify-icon> Download
+                  <iconify-icon
+                    icon="ph:download-simple-bold"
+                    width="16"
+                  ></iconify-icon>
+                  Download
                 </button>
               </div>
             </div>
@@ -499,15 +671,23 @@ function reset() {
           <div
             class="bg-white dark:bg-theme-cardDark rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800 p-5 sticky top-24"
           >
-            <h2 class="font-bold text-slate-900 dark:text-white mb-4 text-base">Actions</h2>
+            <h2 class="font-bold text-slate-900 dark:text-white mb-4 text-base">
+              Actions
+            </h2>
             <button
               v-if="doneItems.length === 1"
               @click="downloadOne(doneItems[0])"
               class="group w-full py-3.5 relative overflow-hidden rounded-xl font-bold mb-3 text-white shadow-lg shadow-brand-primary/30 transition-all duration-300"
             >
-              <div class="absolute inset-0 bg-gradient-to-r from-brand-primary via-brand-secondary to-brand-accent group-hover:scale-110 transition-transform duration-500"></div>
+              <div
+                class="absolute inset-0 bg-gradient-to-r from-brand-primary via-brand-secondary to-brand-accent group-hover:scale-110 transition-transform duration-500"
+              ></div>
               <div class="relative flex items-center justify-center gap-2">
-                <iconify-icon icon="ph:download-simple-bold" width="20"></iconify-icon> Download
+                <iconify-icon
+                  icon="ph:download-simple-bold"
+                  width="20"
+                ></iconify-icon>
+                Download
               </div>
             </button>
             <button
@@ -515,9 +695,12 @@ function reset() {
               @click="downloadAll"
               class="group w-full py-3.5 relative overflow-hidden rounded-xl font-bold mb-3 text-white shadow-lg shadow-green-500/30 transition-all duration-300"
             >
-              <div class="absolute inset-0 bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 group-hover:scale-110 transition-transform duration-500"></div>
+              <div
+                class="absolute inset-0 bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 group-hover:scale-110 transition-transform duration-500"
+              ></div>
               <div class="relative flex items-center justify-center gap-2">
-                <iconify-icon icon="ph:file-zip-bold" width="20"></iconify-icon> Download All ZIP
+                <iconify-icon icon="ph:file-zip-bold" width="20"></iconify-icon>
+                Download All ZIP
               </div>
             </button>
             <button
