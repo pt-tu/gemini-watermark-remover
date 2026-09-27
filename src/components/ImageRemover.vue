@@ -223,6 +223,54 @@ async function downloadTuner() {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+// URL import state
+const showUrlInput = ref(false);
+const urlInputValue = ref('');
+const isFetchingUrls = ref(false);
+const urlError = ref('');
+
+async function importFromUrls() {
+  const lines = urlInputValue.value
+    .split(/[\n,\s]+/)
+    .map((s) => s.trim())
+    .filter((s) => /^https?:\/\//i.test(s));
+
+  if (!lines.length) {
+    urlError.value = 'Please enter at least one valid image URL.';
+    return;
+  }
+
+  isFetchingUrls.value = true;
+  urlError.value = '';
+  const fetchedFiles = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const url = lines[i];
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      let name = `image_${Date.now()}_${i + 1}.png`;
+      try {
+        const u = new URL(url);
+        const p = u.pathname.split('/').filter(Boolean).pop();
+        if (p) name = p.includes('.') ? p : `${p}.png`;
+      } catch (_) {}
+      fetchedFiles.push(new File([blob], name, { type: blob.type || 'image/png' }));
+    } catch (err) {
+      console.error('Failed to fetch image:', url, err);
+      urlError.value = `Failed: ${url.slice(0, 30)}... (${err.message})`;
+    }
+  }
+
+  isFetchingUrls.value = false;
+  if (fetchedFiles.length) {
+    urlInputValue.value = '';
+    showUrlInput.value = false;
+    handleFiles(fetchedFiles);
+  }
+}
+
 function reset() {
   items.value.forEach((i) => {
     if (i.url) URL.revokeObjectURL(i.url);
@@ -233,6 +281,9 @@ function reset() {
   tunerOrigSrc.value = '';
   tunerActive.value = false;
   tunerFrame.value = null;
+  showUrlInput.value = false;
+  urlInputValue.value = '';
+  urlError.value = '';
   if (fileInput.value) fileInput.value.value = '';
 }
 </script>
@@ -332,6 +383,44 @@ function reset() {
           <input type="checkbox" v-model="advanced" class="accent-brand-primary w-3.5 h-3.5" />
           Advanced: tune it yourself
         </label>
+
+        <!-- Import from URL Section -->
+        <div class="mt-4 pt-3 border-t border-gray-200/60 dark:border-gray-700/60 w-full max-w-sm flex flex-col items-center" @click.stop>
+          <button
+            type="button"
+            @click="showUrlInput = !showUrlInput"
+            class="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-primary hover:text-brand-secondary transition-colors cursor-pointer py-1 px-2.5 rounded-lg hover:bg-brand-primary/10"
+          >
+            <iconify-icon icon="ph:link-bold" width="14"></iconify-icon>
+            {{ showUrlInput ? 'Close URL import' : 'Or import image from URL / Link' }}
+          </button>
+
+          <div v-if="showUrlInput" class="mt-2.5 w-full text-left bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md">
+            <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
+              Paste image link(s) (one per line):
+            </label>
+            <textarea
+              v-model="urlInputValue"
+              rows="3"
+              placeholder="https://flow-content.google/image/... or direct image link"
+              class="w-full text-xs font-mono p-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-primary/50 resize-y"
+            ></textarea>
+            <div class="flex items-center justify-between mt-2">
+              <span v-if="urlError" class="text-[11px] text-red-500 font-medium truncate max-w-[200px]" :title="urlError">{{ urlError }}</span>
+              <span v-else class="text-[10px] text-slate-400">Supports Google Flow & direct PNG/JPG</span>
+              <button
+                type="button"
+                @click="importFromUrls"
+                :disabled="isFetchingUrls || !urlInputValue.trim()"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-primary hover:bg-brand-secondary disabled:opacity-50 text-white text-xs font-bold rounded-lg transition-all shadow-sm cursor-pointer"
+              >
+                <iconify-icon v-if="isFetchingUrls" icon="ph:spinner-bold" class="animate-spin" width="14"></iconify-icon>
+                <iconify-icon v-else icon="ph:cloud-arrow-down-bold" width="14"></iconify-icon>
+                {{ isFetchingUrls ? 'Downloading…' : 'Fetch & Clean' }}
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
       <input
         ref="fileInput"
